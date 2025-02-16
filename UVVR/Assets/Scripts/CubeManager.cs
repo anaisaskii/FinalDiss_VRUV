@@ -11,6 +11,8 @@ public class CubeManager : MonoBehaviour
     public Material cubeDisplayMat;
     public Texture2D[] cubeTextures;
 
+    int cubeschosen = 1;
+
     private Dictionary<string, Texture2D> textureDict = new Dictionary<string, Texture2D>();
 
     //make this into a queue so that cubes can be in random orders
@@ -39,7 +41,8 @@ public class CubeManager : MonoBehaviour
     void ChooseCube()
     {
         //Chooses a random cube from the array 
-        CurrentCube = cubeNames[Random.Range(0, cubeNames.Length)];
+
+        CurrentCube = cubeNames[cubeschosen];
 
         Debug.Log("Pickup: " + CurrentCube);
         //make sure it isn't the same as previous cube
@@ -49,6 +52,7 @@ public class CubeManager : MonoBehaviour
         if (textureDict.TryGetValue(CurrentCube, out Texture2D selectedTexture))
         {
             PlaneRenderer.material.mainTexture = selectedTexture;
+            cubeschosen += 1;
         }
         else
         {
