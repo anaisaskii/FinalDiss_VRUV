@@ -1,58 +1,105 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Video;
 using UnityEngine.InputSystem;
 
 public class ShapeEdgeRaycast : MonoBehaviour
 {
-    public Material cubeEdgeMaterial;
-    //use for loop to get each box collider in order
-    //then can check if hit
-    public BoxCollider collider1;
+    public Material litEdge;    // Material when edge is hit
+    public Material unlitEdge; // Default material
     public Transform controller;
-    private float offsetY = 0.1f;
     public GameObject[] shapes;
 
     private GameObject currentShape;
     private int currentShapeIndex = 0;
-    private int currentboxcollider = 0;
+    private int currentBoxColliderIndex = 0;
+
+    private MeshRenderer shapeMeshRenderer;
+    private BoxCollider[] boxColliders;
+    private Material[] shapematerials;
+
+    public VideoPlayer VideoPlayer;
+    public VideoClip[] cubeVideoClips;
+
+    public InputActionProperty rightTriggerAction;
 
     private void Start()
     {
-        cubeEdgeMaterial.SetTextureOffset("_MainTex", new Vector2(0, 0));
+        SpawnNewShape();
+    }
+
+    void SpawnNewShape()
+    {
+        if (currentShapeIndex >= shapes.Length)
+        {
+            Debug.Log("All shapes completed!");
+            return; // Prevent out-of-bounds error
+        }
+
+        // Instantiate and set up the new shape
+        currentShape = Instantiate(shapes[currentShapeIndex], new Vector3(0.6f, 1.9f, 2.1f), Quaternion.Euler(-90f, 0f, -180f));
+        shapeMeshRenderer = currentShape.GetComponent<MeshRenderer>();
+        boxColliders = currentShape.GetComponentsInChildren<BoxCollider>();
+        shapematerials = shapeMeshRenderer.materials;
+
+        // Reset materials & collider index
+        ResetEdges();
+        currentBoxColliderIndex = 0;
+    }
+
+    void ResetEdges()
+    {
+        for (int i = 0; i < shapematerials.Length; i++)
+        {
+            //shapematerials[i] = unlitEdge; // Reset all materials to default
+            Debug.Log($"Material Index {i}: {shapematerials[i].name.Replace("(Instance)", "").Trim()}");
+        }
+        shapeMeshRenderer.materials = shapematerials; //Update renderer
     }
 
     private void Update()
     {
-        //only display current shape
-        currentShape = shapes[currentShapeIndex]; //increase by one once shape has been unwrapped
-        currentShape.GetComponent<MeshRenderer>().enabled = true; //hide at end
+        if (currentBoxColliderIndex >= boxColliders.Length)
+            return; // Stop processing if all colliders are done
 
-        //get bounding boxes
-        BoxCollider[] boxcolliders = currentShape.GetComponentsInChildren<BoxCollider>();
+        BoxCollider currentCollider = boxColliders[currentBoxColliderIndex]; // Get the current collider in order
 
-        Ray ray = new Ray(controller.position, controller.forward);
-        Debug.DrawRay(controller.position, controller.forward);
-        RaycastHit hit;
+        float triggerValue = rightTriggerAction.action.ReadValue<float>();
 
-        //get shape bounds and iterate through each one
-
-        if (Physics.Raycast(ray, out hit, 10f)) 
+        if (triggerValue > 0.1f) // Small threshold to detect a press
         {
-            if (boxcolliders[currentboxcollider].bounds.Contains(hit.point)) // checks if inside bounding box
-            {
-                cubeEdgeMaterial.SetTextureOffset("_MainTex", new Vector2(0, offsetY));
+            Ray ray = new Ray(controller.position, controller.forward);
+            Debug.DrawRay(controller.position, controller.forward);
+            RaycastHit hit;
 
-                currentboxcollider += 1;
-                if (currentboxcollider >= boxcolliders.Length)
+            if (Physics.Raycast(ray, out hit, 10f))
+            {
+                if (currentCollider.bounds.Contains(hit.point)) // Check only the current collider
                 {
-                    // Hide the shape and move to next
-                    currentShape.GetComponent<MeshRenderer>().enabled = false;
-                    currentShapeIndex += 1;
-                    currentboxcollider = 0; // Reset for next shape
+                    Debug.Log("Hit on collider: " + currentBoxColliderIndex);
+
+                    shapematerials[currentBoxColliderIndex + 1] = litEdge; // Ensure correct index
+                    
+                    shapeMeshRenderer.materials = shapematerials; // Apply changes
+
+                    currentCollider.enabled = false; // Disable this collider
+                    currentBoxColliderIndex++; // Move to the next collider in order
+
+                    if (currentBoxColliderIndex < boxColliders.Length)
+                    {
+                        VideoPlayer.clip = cubeVideoClips[currentBoxColliderIndex]; //change video
+                    }
+
+                    // If all colliders are processed, move to the next shape
+                    if (currentBoxColliderIndex >= boxColliders.Length)
+                    {
+                        Destroy(currentShape);
+                        currentShapeIndex++;
+                        SpawnNewShape();
+                    }
                 }
             }
         }
-
     }
 }

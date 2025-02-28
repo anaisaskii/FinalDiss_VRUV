@@ -3,7 +3,52 @@ guid: ee3f0ccffcd3ee0408b5c712df34b5b6
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: CubeMain
+    second: {fileID: 2100000, guid: 55d974dd942d9f94488e620cecec219a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: CubeOutline
+    second: {fileID: 2100000, guid: efac9b14aee47d84f97438681652b337, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Outline1
+    second: {fileID: 2100000, guid: 4c3bbcd508bc9a944b2474626d0e2efb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Outline2
+    second: {fileID: 2100000, guid: 6acea616fbfaa084290604203fa83db6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Outline3
+    second: {fileID: 2100000, guid: c4ee802c27af9594dbdefe84fde19f6b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Outline4
+    second: {fileID: 2100000, guid: f308e93155c44dd4baee4414a3c64ef2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Outline5
+    second: {fileID: 2100000, guid: 2f04371e98bb97345808e509dae36125, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Outline6
+    second: {fileID: 2100000, guid: 1c9eae3a61afa354481ed1ebc7ecf4f2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Outline7
+    second: {fileID: 2100000, guid: e8307d47028d43244927ffb5302a2dc3, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
