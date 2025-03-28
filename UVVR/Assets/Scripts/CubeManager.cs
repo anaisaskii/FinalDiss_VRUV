@@ -1,89 +1,205 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.SceneManagement;
 
 public class CubeManager : MonoBehaviour
 {
-    string CurrentCube;
+    string CurrentShape;
 
-    public Renderer PlaneRenderer;
-    public Material cubeDisplayMat;
-    public Texture2D[] cubeTextures;
+    public Renderer PlaneRenderer;  // The target cube image
+    public Material cubeDisplayMat; 
+    public Texture2D[] cubeTexturesSet1; // All images of cubes
+    public Texture2D[] cubeTexturesSet2; // All images of cubes
 
-    int cubeschosen = 1;
+    // The cubes that may be the answer
+    public Renderer[] answerRenderers;
 
-    private Dictionary<string, Texture2D> textureDict = new Dictionary<string, Texture2D>();
+    private Dictionary<string, List<Texture2D>> textureGroups = new Dictionary<string, List<Texture2D>>();
+    private Queue<string> selectedShapesQueue = new Queue<string>();
 
-    //make this into a queue so that cubes can be in random orders
-    string[] cubeNames = { "Cube_1", "Cube_2", "Cube_3" };
+    private Texture2D currentCorrectTexture;            // Correct shape, correct angle (on main plane)
+    private Texture2D currentCorrectDifferentAngle;     // Correct shape, different angle (in answers)
 
-    public void LogObjectPickup(SelectEnterEventArgs args)
-    {
-        Debug.Log("Picked up: " + args.interactableObject.transform.name);
-        CheckCube(args);
-    }
+    private Texture2D[] currentAnswerOptions = new Texture2D[4]; // The 4 answer options
 
-    //get reference to cubepickupcheck
+    private int correctAnswers = 0;
+    private int roundsCompleted = 0;
+
+    public int cubesChosenSet = 0;
+
+    public Timer timer;
+
     void Start()
     {
-        //create an array of cube images
-        //match up images to cubes
-        
-        foreach(Texture2D tex in cubeTextures)
+        //choose a random number between 0 and 1 to determine which cube set to use
+
+        if (timer.GetSetCompleted() == 3)
         {
-            textureDict[tex.name] = tex;
-        }
-
-        ChooseCube();
-    }
-
-    void ChooseCube()
-    {
-        //Chooses a random cube from the array 
-
-        CurrentCube = cubeNames[cubeschosen];
-
-        Debug.Log("Pickup: " + CurrentCube);
-        //make sure it isn't the same as previous cube
-        //have random order in queue
-        //(pop then push to queue???)
-
-        if (textureDict.TryGetValue(CurrentCube, out Texture2D selectedTexture))
-        {
-            PlaneRenderer.material.mainTexture = selectedTexture;
-            cubeschosen += 1;
+            Debug.Log("No existing set found, doing a random one");
+            cubesChosenSet = Random.Range(0, 2);
         }
         else
         {
-            Debug.LogError("Texture not found for " + CurrentCube);
+            //check the previous set
+            int previousSet = timer.GetSetCompleted();
+            Debug.Log("The previous set was: " + previousSet);
+            //reverse
+            if (previousSet == 1)
+            {
+                cubesChosenSet = 0;
+            }
+            else
+            {
+                cubesChosenSet = 1;
+            }
+            Debug.Log("The chosen set is: " + cubesChosenSet);
         }
+
+        OrganizeTextures();
+        PrepareShapeQueue();
+        ChooseNextShape();
     }
 
-    void Update()
+    //read from csv first
+    void OrganizeTextures()
     {
-        //choose a cube image
-        //display 4 random cubes ENSURING one of them is correct
-        //randomise order
-
-        //check if a cube has been picked up
-        //check if cube was right or wrong
-        //progress
-    }
-
-    void CheckCube(SelectEnterEventArgs cube)
-    {
-        string pickedCubeName = cube.interactableObject.transform.name;
-
-        if (pickedCubeName == CurrentCube)
+        if (cubesChosenSet == 1)
         {
-            Debug.Log("Correct!");
+            foreach (Texture2D tex in cubeTexturesSet1)
+            {
+                //split image where there's a '_'
+                string shapeName = tex.name.Split('_')[0];
+                if (!textureGroups.ContainsKey(shapeName))
+                {
+                    textureGroups[shapeName] = new List<Texture2D>();
+                }
+                textureGroups[shapeName].Add(tex);
+            }
         }
         else
         {
-            Debug.Log("Incorrect!");
+            foreach (Texture2D tex in cubeTexturesSet2)
+            {
+                //split image where there's a '_'
+                string shapeName = tex.name.Split('_')[0];
+                if (!textureGroups.ContainsKey(shapeName))
+                {
+                    textureGroups[shapeName] = new List<Texture2D>();
+                }
+                textureGroups[shapeName].Add(tex);
+            }
+        }
+    }
+
+    void PrepareShapeQueue()
+    {
+        List<string> allShapes = new List<string>(textureGroups.Keys);
+        ShuffleList(allShapes);
+        foreach (string shape in allShapes)
+        {
+            selectedShapesQueue.Enqueue(shape);
+        }
+    }
+
+    void ChooseNextShape()
+    {
+        if (selectedShapesQueue.Count == 0)
+        {
+            Debug.Log("All shapes completed!");
+            return;
         }
 
-        ChooseCube();
+        CurrentShape = selectedShapesQueue.Dequeue();
+        List<Texture2D> shapeTextures = textureGroups[CurrentShape];
+
+        // Pick random angle for display
+        currentCorrectTexture = shapeTextures[Random.Range(0, shapeTextures.Count)];
+
+        // Set main plane texture
+        PlaneRenderer.material.mainTexture = currentCorrectTexture;
+
+        // pick a DIFFERENT angle for the correct answer
+        do
+        {
+            currentCorrectDifferentAngle = shapeTextures[Random.Range(0, shapeTextures.Count)];
+        }
+        while (currentCorrectDifferentAngle == currentCorrectTexture);
+
+        // Collect wrong options — 3 different shapes
+        List<Texture2D> wrongOptions = new List<Texture2D>();
+
+        List<string> otherShapes = new List<string>(textureGroups.Keys);
+        otherShapes.Remove(CurrentShape); // So that all answers are different
+
+        ShuffleList(otherShapes);
+
+        for (int i = 0; i < 3; i++)
+        {
+            string wrongShape = otherShapes[i];
+            List<Texture2D> wrongShapeTextures = textureGroups[wrongShape];
+            Texture2D wrongTexture = wrongShapeTextures[Random.Range(0, wrongShapeTextures.Count)];
+            wrongOptions.Add(wrongTexture);
+        }
+
+        // Combine into the 4 options
+        List<Texture2D> allOptions = new List<Texture2D>
+        {
+            currentCorrectDifferentAngle, // the only corect option
+            wrongOptions[0],
+            wrongOptions[1],
+            wrongOptions[2]
+        };
+
+        ShuffleList(allOptions);
+
+        // assign textures to answer slots
+        for (int i = 0; i < answerRenderers.Length; i++)
+        {
+            answerRenderers[i].material.mainTexture = allOptions[i];
+        }
+
+        currentAnswerOptions = allOptions.ToArray();
+
+        //Debug.Log($"New round: Correct shape is {CurrentShape}");
+    }
+
+    public void CheckAnswer(int selectedIndex)
+    {
+        Renderer clickedRenderer = answerRenderers[selectedIndex];
+        Texture2D selectedTexture = (Texture2D)clickedRenderer.material.mainTexture;
+
+        bool isCorrect = selectedTexture.name == currentCorrectDifferentAngle.name;
+
+        timer.LogShapeTime(CurrentShape, isCorrect);
+
+        roundsCompleted += 1;
+
+        if (isCorrect)
+        {
+            correctAnswers += 1;
+        }
+
+        if (roundsCompleted == 6)
+        {
+            SaveDataToCSV();
+        }
+
+        ChooseNextShape();
+    }
+
+    public void SaveDataToCSV()
+    {
+        timer.SaveData(correctAnswers);
+    }
+
+
+    void ShuffleList<T>(List<T> list)
+    {
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
     }
 }

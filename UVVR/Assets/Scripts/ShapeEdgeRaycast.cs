@@ -3,47 +3,174 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Video;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class ShapeEdgeRaycast : MonoBehaviour
 {
-    public Material litEdge;    // Material when edge is hit
-    public Material unlitEdge; // Default material
-    public Transform controller;
+    [Header("Shapes")]
     public GameObject[] shapes;
+    public GameObject[] SnowmanPartsInGame;
+    public GameObject[] SnowmanParts;
+    public GameObject buttonPodium;
 
+    [Header("Shape Edge Materials")]
+    public Material litEdge;
+    public Material unlitEdge;
+
+    [Header("VR Controls")]
+    public Transform controller;
+    public InputActionProperty rightTriggerAction;
+    public GameObject player;
+    public GameObject userGuide;
+
+    [Header ("Video Clips")]
+    public VideoPlayer VideoPlayer;
+    public VideoClip[] edgeClips;
+    public VideoClip[] unwrapClips;
+
+    private GameObject currentUserGuide;
     private GameObject currentShape;
+
+    private int CurrentSnowmanPart = 0;
     private int currentShapeIndex = 0;
     private int currentBoxColliderIndex = 0;
+    private int currentEdgeVideo = 0;
+    private int completedShapes;
 
     private MeshRenderer shapeMeshRenderer;
     private BoxCollider[] boxColliders;
     private Material[] shapematerials;
 
-    public VideoPlayer VideoPlayer;
-    public VideoClip[] cubeVideoClips;
+    public bool HideUserGuide = false;
+    private bool FinalChallenge = false;
 
-    public InputActionProperty rightTriggerAction;
+    private List<GameObject> completedSnowmanParts = new List<GameObject>();
 
     private void Start()
     {
         SpawnNewShape();
+        spawnGuide();
+    }
+
+    private void Update()
+    {
+        //Hide the user guide for the challenges
+        //unhide if the player needs it
+        if (currentUserGuide)
+        {
+            if (HideUserGuide)
+            {
+                currentUserGuide.GetComponent<MeshRenderer>().enabled = false;
+            }
+            else
+            {
+                currentUserGuide.GetComponent<MeshRenderer>().enabled = true;
+            }
+        }
+
+        lookAtPlayer();
+
+        if (!FinalChallenge)
+        {
+            ProcessStandardShapes();
+        }
+        else
+        {
+            ProcessSnowmanChallenge();
+        }
+    }
+
+
+    void ProcessStandardShapes()
+    {
+        if (currentBoxColliderIndex >= boxColliders.Length) return;
+
+        if (CheckForEdgeHit())
+        {
+            HandleEdgeHit();
+
+            if (currentBoxColliderIndex >= boxColliders.Length)
+            {
+                // All edges completed for current shape
+                Destroy(currentShape);
+
+                //play the unwrapping video for the shape!!
+                StartCoroutine(PlayVideoThenSpawnNextShape());
+
+                currentEdgeVideo += 1;
+                
+                Debug.Log(currentEdgeVideo);
+            }
+            else
+            {
+                // Move guide for next edge
+                spawnGuide();
+            }
+        }
+    }
+
+    IEnumerator PlayVideoThenSpawnNextShape()
+    {
+        if (completedShapes < unwrapClips.Length)
+        {
+            //stop looping to unwrap video plays once
+            VideoPlayer.isLooping = false;
+            VideoPlayer.clip = unwrapClips[completedShapes]; //unwrao video
+            VideoPlayer.Play();
+
+            //while video player loads up 
+            while (!VideoPlayer.isPlaying)
+            {
+                yield return null;  // Wait for one frame until the video starts
+            }
+
+            // Wait for video to finish
+            while (VideoPlayer.isPlaying)
+            {
+                yield return null;
+            }
+
+            completedShapes++;  // Only increment AFTER the video is done
+        }
+        else
+        {
+            Debug.LogWarning("No matching video clip found for shape " + completedShapes);
+        }
+
+        currentShapeIndex++;
+
+        if (currentShapeIndex < shapes.Length)
+        {
+            // Now spawn the next shape
+            SpawnNewShape();
+            spawnGuide();
+            VideoPlayer.isLooping = true; //start looping again
+        }
+        else
+        {
+            FinalChallenge = true;
+            HideUserGuide = true;
+            StartSnowmanChallenge();
+            Instantiate(buttonPodium);
+        }
     }
 
     void SpawnNewShape()
     {
-        if (currentShapeIndex >= shapes.Length)
-        {
-            Debug.Log("All shapes completed!");
-            return; // Prevent out-of-bounds error
-        }
+        if (currentShapeIndex >= shapes.Length) return;
 
-        // Instantiate and set up the new shape
         currentShape = Instantiate(shapes[currentShapeIndex], new Vector3(0.6f, 1.9f, 2.1f), Quaternion.Euler(-90f, 0f, -180f));
-        shapeMeshRenderer = currentShape.GetComponent<MeshRenderer>();
-        boxColliders = currentShape.GetComponentsInChildren<BoxCollider>();
+        SetupShape(currentShape);
+
+        VideoPlayer.clip = edgeClips[currentEdgeVideo];
+    }
+
+    void SetupShape(GameObject shape)
+    {
+        shapeMeshRenderer = shape.GetComponent<MeshRenderer>();
+        boxColliders = shape.GetComponentsInChildren<BoxCollider>();
         shapematerials = shapeMeshRenderer.materials;
 
-        // Reset materials & collider index
         ResetEdges();
         currentBoxColliderIndex = 0;
     }
@@ -52,54 +179,204 @@ public class ShapeEdgeRaycast : MonoBehaviour
     {
         for (int i = 0; i < shapematerials.Length; i++)
         {
-            //shapematerials[i] = unlitEdge; // Reset all materials to default
-            Debug.Log($"Material Index {i}: {shapematerials[i].name.Replace("(Instance)", "").Trim()}");
+            // Reset material if needed
         }
-        shapeMeshRenderer.materials = shapematerials; //Update renderer
+        shapeMeshRenderer.materials = shapematerials;
     }
 
-    private void Update()
+    bool CheckForEdgeHit()
     {
-        if (currentBoxColliderIndex >= boxColliders.Length)
-            return; // Stop processing if all colliders are done
-
-        BoxCollider currentCollider = boxColliders[currentBoxColliderIndex]; // Get the current collider in order
-
         float triggerValue = rightTriggerAction.action.ReadValue<float>();
+        if (triggerValue <= 0.1f) return false;
 
-        if (triggerValue > 0.1f) // Small threshold to detect a press
+        Ray ray = new Ray(controller.position, controller.forward);
+        RaycastHit hit;
+
+        if (Physics.Raycast(ray, out hit, 10f))
         {
-            Ray ray = new Ray(controller.position, controller.forward);
-            Debug.DrawRay(controller.position, controller.forward);
-            RaycastHit hit;
-
-            if (Physics.Raycast(ray, out hit, 10f))
+            BoxCollider currentCollider = boxColliders[currentBoxColliderIndex];
+            if (currentCollider.bounds.Contains(hit.point))
             {
-                if (currentCollider.bounds.Contains(hit.point)) // Check only the current collider
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void HandleEdgeHit()
+    {
+        shapematerials[currentBoxColliderIndex] = litEdge;
+        shapeMeshRenderer.materials = shapematerials;
+
+        boxColliders[currentBoxColliderIndex].enabled = false;
+        currentBoxColliderIndex++;
+
+        if (currentBoxColliderIndex < boxColliders.Length)
+        {
+            if (!FinalChallenge)
+            {
+                currentEdgeVideo += 1;
+                VideoPlayer.clip = edgeClips[currentEdgeVideo];
+                Debug.Log(currentEdgeVideo);
+            }
+            
+        }
+    }
+
+    void spawnGuide()
+    {
+        if (currentUserGuide)
+        {
+            Destroy(currentUserGuide);
+        }
+
+        if (currentBoxColliderIndex < boxColliders.Length)
+        {
+            currentUserGuide = Instantiate(userGuide, boxColliders[currentBoxColliderIndex].bounds.center, Quaternion.identity);
+            currentUserGuide.transform.SetParent(boxColliders[currentBoxColliderIndex].transform);
+        }
+    }
+
+    void lookAtPlayer()
+    {
+        if (!currentUserGuide) return;
+
+        Vector3 directionToPlayer = player.transform.position - currentUserGuide.transform.position;
+        directionToPlayer.y = 0;
+
+        if (directionToPlayer.sqrMagnitude > 0.001f)
+        {
+            Quaternion lookRotation = Quaternion.LookRotation(directionToPlayer);
+            lookRotation *= Quaternion.Euler(90, 0, 0);
+            currentUserGuide.transform.rotation = lookRotation;
+        }
+    }
+
+    // --- Snowman Challenge Logic ---
+
+    void StartSnowmanChallenge()
+    {
+        CurrentSnowmanPart = 0;
+        SpawnNextSnowmanPart();
+    }
+
+    void ProcessSnowmanChallenge()
+    {
+        if (currentBoxColliderIndex >= boxColliders.Length) return;
+
+        if (CheckForEdgeHit())
+        {
+            HandleEdgeHit();
+
+            if (currentBoxColliderIndex >= boxColliders.Length)
+            {
+                if (CurrentSnowmanPart < SnowmanParts.Length - 1)
                 {
-                    Debug.Log("Hit on collider: " + currentBoxColliderIndex);
-
-                    shapematerials[currentBoxColliderIndex + 1] = litEdge; // Ensure correct index
-                    
-                    shapeMeshRenderer.materials = shapematerials; // Apply changes
-
-                    currentCollider.enabled = false; // Disable this collider
-                    currentBoxColliderIndex++; // Move to the next collider in order
-
-                    if (currentBoxColliderIndex < boxColliders.Length)
-                    {
-                        VideoPlayer.clip = cubeVideoClips[currentBoxColliderIndex]; //change video
-                    }
-
-                    // If all colliders are processed, move to the next shape
-                    if (currentBoxColliderIndex >= boxColliders.Length)
-                    {
-                        Destroy(currentShape);
-                        currentShapeIndex++;
-                        SpawnNewShape();
-                    }
+                    MoveCompletedPartToDesk(currentShape);
+                }
+                else
+                {
+                    MoveCompletedPartToDesk(currentShape);
+                    StartCoroutine(PlayFinalVideo());
                 }
             }
+            else
+            {
+                spawnGuide();
+            }
+        }
+    }
+
+    void SpawnNextSnowmanPart()
+    {
+        VideoPlayer.isLooping = true;
+        VideoPlayer.clip = edgeClips[currentEdgeVideo];
+
+        currentShape = Instantiate(SnowmanParts[CurrentSnowmanPart], new Vector3(0.6f, 1.9f, 2.1f), Quaternion.Euler(-90f, 0f, -180f));
+        SetupShape(currentShape);
+        spawnGuide();
+    }
+
+    void BuildSnowman()
+    {
+        //set mesh renderer to true for each part
+        SnowmanPartsInGame[CurrentSnowmanPart].GetComponent<MeshRenderer>().enabled = true;
+
+        completedSnowmanParts.Add(currentShape);
+
+        CurrentSnowmanPart++;
+        if (CurrentSnowmanPart < SnowmanParts.Length)
+        {
+            SpawnNextSnowmanPart();
+        }
+    }
+
+    void MoveCompletedPartToDesk(GameObject part)
+    {
+        StartCoroutine(LerpToDeskPosition(part, new Vector3(1.4f, 0.8f, 2.27f)));
+    }
+
+    IEnumerator LerpToDeskPosition(GameObject part, Vector3 targetPosition)
+    {
+        Vector3 startPos = part.transform.position;
+        float duration = 2.0f;
+        float elapsed = 0;
+
+        if (CurrentSnowmanPart < 2)
+        {
+            currentEdgeVideo += 1;
+            Debug.Log(currentEdgeVideo);
+            VideoPlayer.clip = edgeClips[currentEdgeVideo];
+        }
+
+        while (elapsed < duration)
+        {
+            part.transform.position = Vector3.Lerp(startPos, targetPosition, elapsed / duration);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        part.transform.position = targetPosition;
+        
+        Destroy(part);
+        //unhide relevant snowman part
+        BuildSnowman();
+
+        if (CurrentSnowmanPart == SnowmanParts.Length)
+        {
+            StartCoroutine(PlayFinalVideo());
+        }
+
+        HideUserGuide = true;
+
+    }
+
+    IEnumerator PlayFinalVideo()
+    {
+        if (completedShapes < unwrapClips.Length)
+        {
+            //stop looping to unwrap video plays once
+            VideoPlayer.isLooping = false;
+            VideoPlayer.clip = unwrapClips[completedShapes]; //unwrap video
+            VideoPlayer.Play();
+
+            //while video player loads up 
+            while (!VideoPlayer.isPlaying)
+            {
+                yield return null;  // Wait for one frame until the video starts
+            }
+
+            // Wait for video to finish
+            while (VideoPlayer.isPlaying)
+            {
+                yield return null;
+            }
+
+            SceneManager.LoadScene("BasicScene");
+        }
+        else
+        {
+            Debug.LogWarning("No matching video clip found for shape " + completedShapes);
         }
     }
 }
