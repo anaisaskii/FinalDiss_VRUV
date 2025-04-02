@@ -22,16 +22,13 @@ public class Timer : MonoBehaviour
 
     private List<string> shapeDetails = new List<string>();
 
-
     int RoundsCompleted = 0;
 
-    // Start is called before the first frame update
     void Start()
     {
         shapeStartTime = Time.time;
     }
 
-    // Update is called once per frame
     void Update()
     {
         timeRemaining -= Time.deltaTime;
@@ -47,28 +44,24 @@ public class Timer : MonoBehaviour
         TimerTextDisplay.text = string.Format("{0:00}:{1:00}", minutes, seconds);
     }
 
-    //adds the completed shapes time to the array
-    //call this when a shape is completed
-    public void LogShapeTime(string shapeName, bool isCorrect)
+    public void LogShapeTime(string shapeName, string chosenShape, bool isCorrect)
     {
         float shapeCompletionTime = Time.time - shapeStartTime;
         shapeTimes.Add(shapeCompletionTime);
 
         string correctness = isCorrect ? "Correct" : "Incorrect";
-        shapeDetails.Add($"{shapeName},{shapeCompletionTime:F2},{correctness}");
+        shapeDetails.Add($"{shapeName},{shapeCompletionTime:F2},{correctness},{chosenShape}");
 
         shapeStartTime = Time.time;
     }
 
-    //write time taken to complete each shape to a text file
     public void SaveData(int CorrectAnswers)
     {
         Debug.Log("Writing data as CSV!");
 
-        string filePath = Path.Combine(Application.dataPath, "../TestTimes.csv");
+        string filePath = Path.Combine(Application.persistentDataPath, "TestTimes.csv");
         bool append = false;
 
-        // Check if the file exists before reading
         if (File.Exists(filePath))
         {
             using (StreamReader reader = new StreamReader(filePath))
@@ -88,19 +81,13 @@ public class Timer : MonoBehaviour
             }
         }
 
+        append = (RoundsCompleted == 1);
 
-        //if the test has only been completed once, append to the existing file
-        //if the test has been completed twice (new player) overwrite existing file to store new scores
-        append = (RoundsCompleted == 1) ? true : false;
-
-        Debug.Log("Appending Mode: " + append);
-
-        //only append if second round has been completed
         using (StreamWriter writer = new StreamWriter(filePath, append: append))
         {
             if (!append)
             {
-                writer.WriteLine("Shape Name,Time (seconds),Correct");
+                writer.WriteLine("Shape Name,Time (seconds),Correct,Chosen Shape");
                 RoundsCompleted = 0;
             }
 
@@ -114,28 +101,28 @@ public class Timer : MonoBehaviour
             writer.WriteLine($"Rounds Completed, {RoundsCompleted}");
             writer.WriteLine($"Set Completed, {cubeManager.cubesChosenSet}");
             writer.WriteLine();
-
-            if (!append)
-            {
-                SceneManager.LoadScene("UnwrapScene");
-            }
-            else
-            {
-                SceneManager.LoadScene("EndScene");
-            }
         }
-
 
         Debug.Log($"CSV file saved at: {filePath}");
 
-        
+        if (RoundsCompleted >= 2)
+        {
+            string timestamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string newFilePath = Path.Combine(Application.persistentDataPath, $"TestTimes_{timestamp}.csv");
+            File.Move(filePath, newFilePath);
+            Debug.Log($"Test completed twice. Saved as new file: {newFilePath}");
+            SceneManager.LoadScene("EndScene");
+        }
+        else
+        {
+            SceneManager.LoadScene("UnwrapScene");
+        }
     }
 
     public int GetSetCompleted()
     {
-        string filePath = Path.Combine(Application.dataPath, "../TestTimes.csv");
+        string filePath = Path.Combine(Application.persistentDataPath, "TestTimes.csv");
 
-        // Check if the file exists before reading
         if (File.Exists(filePath))
         {
             using (StreamReader reader = new StreamReader(filePath))
@@ -145,7 +132,6 @@ public class Timer : MonoBehaviour
                 {
                     var parts = line.Split(',');
 
-                    //get which set was completed and pass that back
                     if (parts.Length == 2 && parts[0].Trim() == "Set Completed")
                     {
                         if (int.TryParse(parts[1].Trim(), out int set))
@@ -158,9 +144,7 @@ public class Timer : MonoBehaviour
 
             return setCompleted;
         }
-        //the set can only be 0 or 1 so if it returns 3 then it has to be null
-        //(this is a terrible way of doing things sorry)
-        return 3;
-    }
 
+        return 3; // Default value if no valid set is found
+    }
 }

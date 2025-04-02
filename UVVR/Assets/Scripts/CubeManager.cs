@@ -169,9 +169,11 @@ public class CubeManager : MonoBehaviour
         Renderer clickedRenderer = answerRenderers[selectedIndex];
         Texture2D selectedTexture = (Texture2D)clickedRenderer.material.mainTexture;
 
-        bool isCorrect = selectedTexture.name == currentCorrectDifferentAngle.name;
 
-        timer.LogShapeTime(CurrentShape, isCorrect);
+        bool isCorrect = selectedTexture.name == currentCorrectDifferentAngle.name;
+        string chosenShapeName = selectedTexture.name;
+
+        timer.LogShapeTime(CurrentShape, chosenShapeName, isCorrect);
 
         roundsCompleted += 1;
 
