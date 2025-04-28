@@ -10,7 +10,7 @@ public class tenminutetimer : MonoBehaviour
     //if you see this script no you didn't :)
     // Start is called before the first frame update
 
-    private float timeRemaining = 600f;
+    public float timeRemaining = 600f;
 
     public TextMeshProUGUI TimerTextDisplay;
 

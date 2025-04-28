@@ -28,13 +28,14 @@ public class CubeManager : MonoBehaviour
 
     public int cubesChosenSet = 0;
 
+    public SaveDataToCSV savedatatocsv;
     public Timer timer;
 
     void Start()
     {
         //choose a random number between 0 and 1 to determine which cube set to use
 
-        if (timer.GetSetCompleted() == 3)
+        if (savedatatocsv.GetSetCompleted() == 3)
         {
             Debug.Log("No existing set found, doing a random one");
             cubesChosenSet = Random.Range(0, 2);
@@ -42,7 +43,7 @@ public class CubeManager : MonoBehaviour
         else
         {
             //check the previous set
-            int previousSet = timer.GetSetCompleted();
+            int previousSet = savedatatocsv.GetSetCompleted();
             Debug.Log("The previous set was: " + previousSet);
             //reverse
             if (previousSet == 1)
@@ -192,7 +193,7 @@ public class CubeManager : MonoBehaviour
 
     public void SaveDataToCSV()
     {
-        timer.SaveData(correctAnswers);
+        savedatatocsv.SaveData(correctAnswers);
     }
 
 

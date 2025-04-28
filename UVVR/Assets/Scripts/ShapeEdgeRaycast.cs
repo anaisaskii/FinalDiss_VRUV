@@ -351,6 +351,13 @@ public class ShapeEdgeRaycast : MonoBehaviour
 
     }
 
+    //if shape falls through the floor or something
+    //teleport it back onto the table
+    public void TeleportShapeBack()
+    {
+        currentShape.transform.position = new Vector3(0.6f, 1.9f, 2.1f);
+    }
+
     IEnumerator PlayFinalVideo()
     {
         if (completedShapes < unwrapClips.Length)
