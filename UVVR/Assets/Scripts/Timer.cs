@@ -11,8 +11,8 @@ public class Timer : MonoBehaviour
     public float timeRemaining = 180f;
 
     private float shapeStartTime;
-    public SaveDataToCSV dataManager; // reference to DataManager
-    public CubeManager cubeManager; // still needed to pass cubesChosenSet info
+    public SaveDataToCSV dataManager; // Reference to DataManager
+    public CubeManager cubeManager; // Needed to pass cubesChosenSet info
 
     void Start()
     {
@@ -21,36 +21,35 @@ public class Timer : MonoBehaviour
 
     void Update()
     {
-        //count down timer each second and display as text
+        // Count down timer each second and display as text
         timeRemaining -= Time.deltaTime;
         if (timeRemaining <= 0)
         {
             timeRemaining = 0;
-            Debug.Log("Time is up!");
-            if(SceneManager.GetActiveScene().name == "BasicScene")
+            // If in MRT save data to CSV
+            // If not, (in unwrapping scene), progress to the mental rotations test
+            if(SceneManager.GetActiveScene().name == "MRTScene")
             {
-                //when timer hits 0 and in mental rotations test
-                //save data
                 cubeManager.SaveDataToCSV();
             }
             else
             {
-                //if not in basic scene (in sample scene) load up mental rotations test again
-                SceneManager.LoadScene("BasicScene");
+                SceneManager.LoadScene("MRTScene");
             }
             
         }
 
-        //seperate time into seconds/minutes for readability
+        // Seperate time into seconds/minutes for readability
         int minutes = Mathf.FloorToInt(timeRemaining / 60f);
         int seconds = Mathf.FloorToInt(timeRemaining % 60f);
         TimerTextDisplay.text = string.Format("{0:00}:{1:00}", minutes, seconds);
     }
 
+    /// <summary> Log the time it took to complete a MRT question </summary>
     public void LogShapeTime(string shapeName, string chosenShape, bool isCorrect)
     {
         float shapeCompletionTime = Time.time - shapeStartTime;
         dataManager.AddShapeData(shapeName, shapeCompletionTime, isCorrect, chosenShape);
-        shapeStartTime = Time.time;
+        shapeStartTime = Time.time; // Reset timer
     }
 }

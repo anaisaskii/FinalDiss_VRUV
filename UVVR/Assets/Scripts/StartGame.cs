@@ -7,17 +7,18 @@ public class StartGame : MonoBehaviour
 {
     private SphereCollider sphereCollider;
 
-    // Start is called before the first frame update
     void Start()
     {
+        // Get button collider
         sphereCollider = GetComponent<SphereCollider>();
     }
 
+    //If the player hits the button, start the game
     void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
         {
-            SceneManager.LoadScene("BasicScene");
+            SceneManager.LoadScene("MRTScene");
         }
     }
 }

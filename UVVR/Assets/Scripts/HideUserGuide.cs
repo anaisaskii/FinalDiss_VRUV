@@ -12,6 +12,7 @@ public class HideUserGuide : MonoBehaviour
         shapeedgeraycast = shapespawner.GetComponent<ShapeEdgeRaycast>();
     }
 
+    // If the player hits the button show the user guides
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))

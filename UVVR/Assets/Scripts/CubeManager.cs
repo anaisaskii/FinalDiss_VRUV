@@ -7,42 +7,44 @@ public class CubeManager : MonoBehaviour
 {
     string CurrentShape;
 
-    public Renderer PlaneRenderer;  // The target cube image
+    [Header("Shapes and Materials")]
     public Material cubeDisplayMat; 
     public Texture2D[] cubeTexturesSet1; // All images of cubes
     public Texture2D[] cubeTexturesSet2; // All images of cubes
 
+    [Header("Renderers")]
     // The cubes that may be the answer
+    public Renderer planeRenderer;  // The target cube image
     public Renderer[] answerRenderers;
+
+    [Header("Chosen Set")]
+    public int cubesChosenSet = 0;
+
+    [Header("External Scripts")]
+    public SaveDataToCSV savedatatocsv;
+    public Timer timer;
 
     private Dictionary<string, List<Texture2D>> textureGroups = new Dictionary<string, List<Texture2D>>();
     private Queue<string> selectedShapesQueue = new Queue<string>();
 
     private Texture2D currentCorrectTexture;            // Correct shape, correct angle (on main plane)
     private Texture2D currentCorrectDifferentAngle;     // Correct shape, different angle (in answers)
-
     private Texture2D[] currentAnswerOptions = new Texture2D[4]; // The 4 answer options
 
     private int correctAnswers = 0;
     private int roundsCompleted = 0;
 
-    public int cubesChosenSet = 0;
-
-    public SaveDataToCSV savedatatocsv;
-    public Timer timer;
-
     void Start()
     {
-        //choose a random number between 0 and 1 to determine which cube set to use
-
+        // Choose a random number between 0 and 1 to determine which cube set to use
+        // (If none can be read from the CSV file)
         if (savedatatocsv.GetSetCompleted() == 3)
         {
-            Debug.Log("No existing set found, doing a random one");
             cubesChosenSet = Random.Range(0, 2);
         }
         else
         {
-            //check the previous set
+            // Set the previously completed set to be the one read from the file
             int previousSet = savedatatocsv.GetSetCompleted();
             Debug.Log("The previous set was: " + previousSet);
             //reverse
@@ -114,24 +116,24 @@ public class CubeManager : MonoBehaviour
         CurrentShape = selectedShapesQueue.Dequeue();
         List<Texture2D> shapeTextures = textureGroups[CurrentShape];
 
-        // Pick random angle for display
+        // Pick random angle to display
         currentCorrectTexture = shapeTextures[Random.Range(0, shapeTextures.Count)];
 
         // Set main plane texture
-        PlaneRenderer.material.mainTexture = currentCorrectTexture;
+        planeRenderer.material.mainTexture = currentCorrectTexture;
 
-        // pick a DIFFERENT angle for the correct answer
+        // Pick a DIFFERENT angle for the correct answer
         do
         {
             currentCorrectDifferentAngle = shapeTextures[Random.Range(0, shapeTextures.Count)];
         }
         while (currentCorrectDifferentAngle == currentCorrectTexture);
 
-        // Collect wrong options — 3 different shapes
+        // Choose 3 incorrect answers
         List<Texture2D> wrongOptions = new List<Texture2D>();
 
         List<string> otherShapes = new List<string>(textureGroups.Keys);
-        otherShapes.Remove(CurrentShape); // So that all answers are different
+        otherShapes.Remove(CurrentShape); // so that all answers are different
 
         ShuffleList(otherShapes);
 
@@ -161,10 +163,9 @@ public class CubeManager : MonoBehaviour
         }
 
         currentAnswerOptions = allOptions.ToArray();
-
-        //Debug.Log($"New round: Correct shape is {CurrentShape}");
     }
 
+    // check the chosen shapes material against the target one
     public void CheckAnswer(int selectedIndex)
     {
         Renderer clickedRenderer = answerRenderers[selectedIndex];

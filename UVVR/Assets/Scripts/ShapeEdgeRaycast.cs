@@ -28,6 +28,9 @@ public class ShapeEdgeRaycast : MonoBehaviour
     public VideoClip[] edgeClips;
     public VideoClip[] unwrapClips;
 
+    [Header("User Guide")]
+    public bool HideUserGuide = false;
+
     private GameObject currentUserGuide;
     private GameObject currentShape;
 
@@ -41,7 +44,6 @@ public class ShapeEdgeRaycast : MonoBehaviour
     private BoxCollider[] boxColliders;
     private Material[] shapematerials;
 
-    public bool HideUserGuide = false;
     private bool FinalChallenge = false;
 
     private List<GameObject> completedSnowmanParts = new List<GameObject>();
@@ -113,9 +115,9 @@ public class ShapeEdgeRaycast : MonoBehaviour
     {
         if (completedShapes < unwrapClips.Length)
         {
-            //stop looping to unwrap video plays once
+            // stop looping so that the unwrap video can play once
             VideoPlayer.isLooping = false;
-            VideoPlayer.clip = unwrapClips[completedShapes]; //unwrao video
+            VideoPlayer.clip = unwrapClips[completedShapes];
             VideoPlayer.Play();
 
             //while video player loads up 
@@ -141,11 +143,12 @@ public class ShapeEdgeRaycast : MonoBehaviour
 
         if (currentShapeIndex < shapes.Length)
         {
-            // Now spawn the next shape
+            // Spawn the next shape and guide
             SpawnNewShape();
             spawnGuide();
-            VideoPlayer.isLooping = true; //start looping again
+            VideoPlayer.isLooping = true; //loop the edge video
         }
+        //if all primitive shapes done, do final challenge
         else
         {
             FinalChallenge = true;
@@ -155,6 +158,7 @@ public class ShapeEdgeRaycast : MonoBehaviour
         }
     }
 
+    //spawn in a new shape and update the video player
     void SpawnNewShape()
     {
         if (currentShapeIndex >= shapes.Length) return;
@@ -165,6 +169,7 @@ public class ShapeEdgeRaycast : MonoBehaviour
         VideoPlayer.clip = edgeClips[currentEdgeVideo];
     }
 
+    // set up the shape materials and colliders
     void SetupShape(GameObject shape)
     {
         shapeMeshRenderer = shape.GetComponent<MeshRenderer>();
@@ -175,15 +180,16 @@ public class ShapeEdgeRaycast : MonoBehaviour
         currentBoxColliderIndex = 0;
     }
 
+    // reset all the materials on the shape edges
     void ResetEdges()
     {
-        for (int i = 0; i < shapematerials.Length; i++)
-        {
-            // Reset material if needed
-        }
         shapeMeshRenderer.materials = shapematerials;
     }
 
+    /// <summary>
+    /// Cast ray from right controller.
+    /// If it hits the currently active box collider, return true
+    /// </summary>
     bool CheckForEdgeHit()
     {
         float triggerValue = rightTriggerAction.action.ReadValue<float>();
@@ -203,6 +209,7 @@ public class ShapeEdgeRaycast : MonoBehaviour
         return false;
     }
 
+    // Logic for when player successfully hits an edge
     void HandleEdgeHit()
     {
         shapematerials[currentBoxColliderIndex] = litEdge;
@@ -223,6 +230,7 @@ public class ShapeEdgeRaycast : MonoBehaviour
         }
     }
 
+    //spawn in the assistive guide
     void spawnGuide()
     {
         if (currentUserGuide)
@@ -237,6 +245,9 @@ public class ShapeEdgeRaycast : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Ensure blue light guide is always facing player as it's a 2D plane
+    /// </summary>
     void lookAtPlayer()
     {
         if (!currentUserGuide) return;
@@ -260,6 +271,7 @@ public class ShapeEdgeRaycast : MonoBehaviour
         SpawnNextSnowmanPart();
     }
 
+    // Logic for the final challenge
     void ProcessSnowmanChallenge()
     {
         if (currentBoxColliderIndex >= boxColliders.Length) return;
@@ -289,6 +301,7 @@ public class ShapeEdgeRaycast : MonoBehaviour
 
     void SpawnNextSnowmanPart()
     {
+        // Loop videos again as they display which part to choose
         VideoPlayer.isLooping = true;
         VideoPlayer.clip = edgeClips[currentEdgeVideo];
 
@@ -297,9 +310,10 @@ public class ShapeEdgeRaycast : MonoBehaviour
         spawnGuide();
     }
 
+    // Unhide mesh once shape has been unwrapped
+    // Progress to next part
     void BuildSnowman()
     {
-        //set mesh renderer to true for each part
         SnowmanPartsInGame[CurrentSnowmanPart].GetComponent<MeshRenderer>().enabled = true;
 
         completedSnowmanParts.Add(currentShape);
@@ -316,6 +330,9 @@ public class ShapeEdgeRaycast : MonoBehaviour
         StartCoroutine(LerpToDeskPosition(part, new Vector3(1.4f, 0.8f, 2.27f)));
     }
 
+    /// <summary>
+    /// Move the completed challenge object to its assigned position on the table
+    /// </summary>
     IEnumerator LerpToDeskPosition(GameObject part, Vector3 targetPosition)
     {
         Vector3 startPos = part.transform.position;
@@ -351,8 +368,7 @@ public class ShapeEdgeRaycast : MonoBehaviour
 
     }
 
-    //if shape falls through the floor or something
-    //teleport it back onto the table
+    // Return shape to original position if it becomes unnattainable
     public void TeleportShapeBack()
     {
         currentShape.transform.position = new Vector3(0.6f, 1.9f, 2.1f);
@@ -379,7 +395,7 @@ public class ShapeEdgeRaycast : MonoBehaviour
                 yield return null;
             }
 
-            SceneManager.LoadScene("BasicScene");
+            SceneManager.LoadScene("MRTScene");
         }
         else
         {
