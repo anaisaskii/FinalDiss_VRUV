@@ -8,16 +8,16 @@ public class HideUserGuide : MonoBehaviour
 
     private void Start()
     {
-        GameObject shapespawner = GameObject.Find("Shapes");
+        GameObject shapespawner = GameObject.Find("Shape Manager");
         shapeedgeraycast = shapespawner.GetComponent<ShapeEdgeRaycast>();
     }
 
-    // If the player hits the button show the user guides
+    // If the player hits the button show the user guides (edges light up)
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
         {
-            shapeedgeraycast.HideUserGuide = false;
+            shapeedgeraycast.hideUserGuide = false;
         }
     }
 }

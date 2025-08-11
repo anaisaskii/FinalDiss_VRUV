@@ -9,12 +9,12 @@ public class CubeManager : MonoBehaviour
 
     [Header("Shapes and Materials")]
     public Material cubeDisplayMat; 
-    public Texture2D[] cubeTexturesSet1; // All images of cubes
-    public Texture2D[] cubeTexturesSet2; // All images of cubes
+    public Texture2D[] cubeTexturesSet1;
+    public Texture2D[] cubeTexturesSet2;
 
     [Header("Renderers")]
     // The cubes that may be the answer
-    public Renderer planeRenderer;  // The target cube image
+    public Renderer planeRenderer;  // target cube image
     public Renderer[] answerRenderers;
 
     [Header("Chosen Set")]
@@ -24,12 +24,18 @@ public class CubeManager : MonoBehaviour
     public SaveDataToCSV savedatatocsv;
     public Timer timer;
 
-    private Dictionary<string, List<Texture2D>> textureGroups = new Dictionary<string, List<Texture2D>>();
+    [Header("Audio")]
+    public AudioSource selectSound;
+
+    private Dictionary<string, List<Texture2D>> correctAnswersPerShape = new Dictionary<string, List<Texture2D>>();
+    private Dictionary<string, List<Texture2D>> wrongAnswersPerShape = new Dictionary<string, List<Texture2D>>();
+
+
     private Queue<string> selectedShapesQueue = new Queue<string>();
 
-    private Texture2D currentCorrectTexture;            // Correct shape, correct angle (on main plane)
-    private Texture2D currentCorrectDifferentAngle;     // Correct shape, different angle (in answers)
-    private Texture2D[] currentAnswerOptions = new Texture2D[4]; // The 4 answer options
+    private Texture2D currentCorrectTexture; // Correct shape, correct angle (on target plane)
+    private Texture2D currentCorrectDifferentAngle; // Correct shape, different angle (in answers)
+    private Texture2D[] currentAnswerOptions = new Texture2D[4]; // answer options
 
     private int correctAnswers = 0;
     private int roundsCompleted = 0;
@@ -47,7 +53,7 @@ public class CubeManager : MonoBehaviour
             // Set the previously completed set to be the one read from the file
             int previousSet = savedatatocsv.GetSetCompleted();
             Debug.Log("The previous set was: " + previousSet);
-            //reverse
+            //reversed because I messed up the order
             if (previousSet == 1)
             {
                 cubesChosenSet = 0;
@@ -59,6 +65,7 @@ public class CubeManager : MonoBehaviour
             Debug.Log("The chosen set is: " + cubesChosenSet);
         }
 
+        timer.ResetTimer();
         OrganizeTextures();
         PrepareShapeQueue();
         ChooseNextShape();
@@ -67,41 +74,29 @@ public class CubeManager : MonoBehaviour
     //read from csv first
     void OrganizeTextures()
     {
-        if (cubesChosenSet == 1)
-        {
-            foreach (Texture2D tex in cubeTexturesSet1)
-            {
-                //split image where there's a '_'
-                string shapeName = tex.name.Split('_')[0];
-                if (!textureGroups.ContainsKey(shapeName))
-                {
-                    textureGroups[shapeName] = new List<Texture2D>();
-                }
-                textureGroups[shapeName].Add(tex);
-            }
-        }
-        else
-        {
-            foreach (Texture2D tex in cubeTexturesSet2)
-            {
-                //split image where there's a '_'
-                string shapeName = tex.name.Split('_')[0];
-                if (!textureGroups.ContainsKey(shapeName))
-                {
-                    textureGroups[shapeName] = new List<Texture2D>();
-                }
-                textureGroups[shapeName].Add(tex);
-            }
-        }
-    }
+        Texture2D[] selectedSet = (cubesChosenSet == 1) ? cubeTexturesSet1 : cubeTexturesSet2;
 
-    void PrepareShapeQueue()
-    {
-        List<string> allShapes = new List<string>(textureGroups.Keys);
-        ShuffleList(allShapes);
-        foreach (string shape in allShapes)
+        foreach (Texture2D tex in selectedSet)
         {
-            selectedShapesQueue.Enqueue(shape);
+            //textures are named so that they can be split at the '_' and organised
+            string[] parts = tex.name.Split('_');
+            if (parts.Length < 2) continue;
+
+            string shapeName = parts[0];
+            string type = parts[1];
+
+            if (type == "Correct")
+            {
+                if (!correctAnswersPerShape.ContainsKey(shapeName))
+                    correctAnswersPerShape[shapeName] = new List<Texture2D>();
+                correctAnswersPerShape[shapeName].Add(tex);
+            }
+            else if (type == "Incorrect")
+            {
+                if (!wrongAnswersPerShape.ContainsKey(shapeName))
+                    wrongAnswersPerShape[shapeName] = new List<Texture2D>();
+                wrongAnswersPerShape[shapeName].Add(tex);
+            }
         }
     }
 
@@ -114,41 +109,31 @@ public class CubeManager : MonoBehaviour
         }
 
         CurrentShape = selectedShapesQueue.Dequeue();
-        List<Texture2D> shapeTextures = textureGroups[CurrentShape];
 
-        // Pick random angle to display
-        currentCorrectTexture = shapeTextures[Random.Range(0, shapeTextures.Count)];
-
-        // Set main plane texture
+        // get correct texture (main image)
+        var correctList = correctAnswersPerShape[CurrentShape];
+        currentCorrectTexture = correctList[Random.Range(0, correctList.Count)];
         planeRenderer.material.mainTexture = currentCorrectTexture;
 
-        // Pick a DIFFERENT angle for the correct answer
+        // pick other one from the correct set as the correct answer
         do
         {
-            currentCorrectDifferentAngle = shapeTextures[Random.Range(0, shapeTextures.Count)];
-        }
+            currentCorrectDifferentAngle = correctList[Random.Range(0, correctList.Count)];
+        } 
         while (currentCorrectDifferentAngle == currentCorrectTexture);
 
-        // Choose 3 incorrect answers
+        // get 3 wrong answers for this specific shape
         List<Texture2D> wrongOptions = new List<Texture2D>();
+        var wrongList = wrongAnswersPerShape[CurrentShape];
+        ShuffleList(wrongList);
+        wrongOptions.Add(wrongList[0]);
+        wrongOptions.Add(wrongList[1]);
+        wrongOptions.Add(wrongList[2]);
 
-        List<string> otherShapes = new List<string>(textureGroups.Keys);
-        otherShapes.Remove(CurrentShape); // so that all answers are different
-
-        ShuffleList(otherShapes);
-
-        for (int i = 0; i < 3; i++)
-        {
-            string wrongShape = otherShapes[i];
-            List<Texture2D> wrongShapeTextures = textureGroups[wrongShape];
-            Texture2D wrongTexture = wrongShapeTextures[Random.Range(0, wrongShapeTextures.Count)];
-            wrongOptions.Add(wrongTexture);
-        }
-
-        // Combine into the 4 options
+        // combine and assign to renderers
         List<Texture2D> allOptions = new List<Texture2D>
         {
-            currentCorrectDifferentAngle, // the only corect option
+            currentCorrectDifferentAngle,
             wrongOptions[0],
             wrongOptions[1],
             wrongOptions[2]
@@ -156,7 +141,6 @@ public class CubeManager : MonoBehaviour
 
         ShuffleList(allOptions);
 
-        // assign textures to answer slots
         for (int i = 0; i < answerRenderers.Length; i++)
         {
             answerRenderers[i].material.mainTexture = allOptions[i];
@@ -165,12 +149,24 @@ public class CubeManager : MonoBehaviour
         currentAnswerOptions = allOptions.ToArray();
     }
 
+    void PrepareShapeQueue()
+    {
+        List<string> allShapes = new List<string>(correctAnswersPerShape.Keys);
+        ShuffleList(allShapes);
+        foreach (string shape in allShapes)
+        {
+            selectedShapesQueue.Enqueue(shape);
+        }
+    }
+
     // check the chosen shapes material against the target one
     public void CheckAnswer(int selectedIndex)
     {
         Renderer clickedRenderer = answerRenderers[selectedIndex];
         Texture2D selectedTexture = (Texture2D)clickedRenderer.material.mainTexture;
 
+        //play selection sound
+        selectSound.Play(0);
 
         bool isCorrect = selectedTexture.name == currentCorrectDifferentAngle.name;
         string chosenShapeName = selectedTexture.name;
@@ -197,7 +193,7 @@ public class CubeManager : MonoBehaviour
         savedatatocsv.SaveData(correctAnswers);
     }
 
-
+    // fisher-yates shuffle
     void ShuffleList<T>(List<T> list)
     {
         for (int i = list.Count - 1; i > 0; i--)

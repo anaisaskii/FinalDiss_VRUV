@@ -277,15 +277,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f12cf96fd74b5904184040316b2c3f20, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -1.4197409
+      value: 4.400736
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f12cf96fd74b5904184040316b2c3f20, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.401
+      value: 0.015002906
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f12cf96fd74b5904184040316b2c3f20, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 2.0072582
+      value: 0.8165576
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f12cf96fd74b5904184040316b2c3f20, type: 3}
       propertyPath: m_LocalRotation.w
@@ -318,15 +318,15 @@ PrefabInstance:
     - target: {fileID: -7511558181221131132, guid: f12cf96fd74b5904184040316b2c3f20, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: b4e6136749ccd07459bc375d8e112637, type: 2}
+      objectReference: {fileID: 2100000, guid: 8280bef0cde6b954492a71264060f845, type: 2}
     - target: {fileID: -7511558181221131132, guid: f12cf96fd74b5904184040316b2c3f20, type: 3}
       propertyPath: m_Materials.Array.data[1]
       value: 
-      objectReference: {fileID: 2100000, guid: b4e6136749ccd07459bc375d8e112637, type: 2}
+      objectReference: {fileID: 2100000, guid: 8280bef0cde6b954492a71264060f845, type: 2}
     - target: {fileID: -7511558181221131132, guid: f12cf96fd74b5904184040316b2c3f20, type: 3}
       propertyPath: m_Materials.Array.data[2]
       value: 
-      objectReference: {fileID: 2100000, guid: b4e6136749ccd07459bc375d8e112637, type: 2}
+      objectReference: {fileID: 2100000, guid: 8280bef0cde6b954492a71264060f845, type: 2}
     - target: {fileID: -7511558181221131132, guid: f12cf96fd74b5904184040316b2c3f20, type: 3}
       propertyPath: m_Materials.Array.data[3]
       value: 

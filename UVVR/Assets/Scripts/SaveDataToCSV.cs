@@ -11,13 +11,15 @@ public class SaveDataToCSV : MonoBehaviour
     private List<string> shapeDetails = new List<string>();
 
     private int roundsCompleted = 0;
-    private int setCompleted; //which set of shapes was completed last
+    // which set of shapes was completed previously
+    // two sets of MRT shapes to complete - 6 each
+    private int setCompleted;
 
-    //
+    // Shape data (accuracy, name, completion time...)
     public void AddShapeData(string shapeName, float completionTime, bool isCorrect, string chosenShape)
     {
-        string correctness = isCorrect ? "Correct" : "Incorrect";
-        shapeDetails.Add($"{shapeName},{completionTime:F2},{correctness},{chosenShape}");
+        string correct = isCorrect ? "Correct" : "Incorrect";
+        shapeDetails.Add($"{shapeName},{completionTime:F2},{correct},{chosenShape}");
     }
 
     /// <summary> Save the data as a CSV file in the persistent data path </summary>
